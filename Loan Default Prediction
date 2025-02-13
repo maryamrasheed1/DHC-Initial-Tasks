@@ -1,0 +1,58 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import SMOTE
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+df = pd.read_excel('C:/Users/ALI/Desktop/Loan_Default.xlsx')
+numeric_columns = df.select_dtypes(include=[np.number]).columns  # Select only numeric columns
+df[numeric_columns] = df[numeric_columns].fillna(df[numeric_columns].mean())  # Fill missing values with mean of numeric columns
+df = pd.get_dummies(df, drop_first=True)
+X = df.drop(columns=['Status'])  # Assuming 'Status' is the target column
+y = df['Status']  # Modify based on your target column name
+
+# Scale the features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+#  Handle class imbalance using SMOTE
+smote = SMOTE(random_state=42)
+X_resampled, y_resampled = smote.fit_resample(X_scaled, y)
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+
+
+# Train a Random Forest model
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+#  Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+# Feature Importance (Optional, for analysis)
+import matplotlib.pyplot as plt
+importances = model.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+# Plot the top 10 features based on importance
+plt.figure(figsize=(10, 6))
+plt.title("Feature Importance (Top 10)")
+plt.barh(range(10), importances[indices][:10], align="center")
+plt.yticks(range(10), np.array(X.columns)[indices][:10])
+plt.xlabel("Relative Importance")
+plt.show()
+
+
+#  Recommendations for lenders
+# Based on model performance, lenders can adjust their decision-making process
+# For example, if the precision or recall for predicting defaults is low, lenders can take extra precautions for high-risk applicants
+if classification_report(y_test, y_pred, output_dict=True)['1']['precision'] < 0.6:
+    print("Recommendation: Precision for predicting defaults is low. Consider improving the model.")
+else:
+print("Recommendation: Model performs well in predicting defaults. Use for loan decision-making.")
