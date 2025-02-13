@@ -1,0 +1,56 @@
+import pandas as pd
+df = pd.read_excel('C:/Users/Ali/Desktop/diabetes.xlsx')
+print(df.head())
+print(df.info())
+import seaborn as sns
+import matplotlib.pyplot as plt
+print(df.describe())
+corr = df.corr()
+sns.heatmap(corr, annot=True, cmap='coolwarm')
+plt.show()
+sns.pairplot(df, hue='Outcome')
+plt.show()
+
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaled_features = scaler.fit_transform(df.drop('Outcome', axis=1))
+
+from sklearn.model_selection import train_test_split
+
+X = scaled_features
+y = df['Outcome']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
+
+# Initialize models
+gb_model = GradientBoostingClassifier()
+svm_model = SVC(probability=True)
+nn_model = MLPClassifier()
+
+# Train models
+gb_model.fit(X_train, y_train)
+svm_model.fit(X_train, y_train)
+nn_model.fit(X_train, y_train)
+from sklearn.metrics import f1_score, roc_auc_score, roc_curve
+
+# Predict and evaluate Gradient Boosting
+y_pred_gb = gb_model.predict(X_test)
+f1_gb = f1_score(y_test, y_pred_gb)
+roc_auc_gb = roc_auc_score(y_test, gb_model.predict_proba(X_test)[:, 1])
+
+# Predict and evaluate SVM
+y_pred_svm = svm_model.predict(X_test)
+f1_svm = f1_score(y_test, y_pred_svm)
+roc_auc_svm = roc_auc_score(y_test, svm_model.predict_proba(X_test)[:, 1])
+
+# Predict and evaluate Neural Network
+y_pred_nn = nn_model.predict(X_test)
+f1_nn = f1_score(y_test, y_pred_nn)
+roc_auc_nn = roc_auc_score(y_test, nn_model.predict_proba(X_test)[:, 1])
+# Print metrics
+print(f"Gradient Boosting - F1 Score: {f1_gb}, AUC-ROC: {roc_auc_gb}")
+print(f"SVM - F1 Score: {f1_svm}, AUC-ROC: {roc_auc_svm}")
+print(f"Neural Network - F1 Score: {f1_nn}, AUC-ROC: {roc_auc_nn}")
