@@ -1,0 +1,79 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, precision_score, recall_score, f1_score
+from imblearn.over_sampling import SMOTE
+import warnings
+
+warnings.filterwarnings("ignore")
+
+# Step 1: Load Dataset
+file_path = r'C:\Users\ALI\Desktop\Word\Fraud.xlsx'  
+df = pd.read_excel(file_path)
+print("Dataset loaded successfully!")
+print(df.head())
+
+# Step 2: Data Preprocessing
+def preprocess_data(df):
+    # Check for missing values
+    print("\nChecking for missing values:")
+    print(df.isnull().sum())
+    
+
+    if 'Class' not in df.columns:
+        raise ValueError("Dataset must contain a 'Class' column (0: Non-fraud, 1: Fraud).")
+    
+    X = df.drop(['Class'], axis=1)  # Features
+    y = df['Class']  # Target
+    
+    # Handle class imbalance using SMOTE
+    smote = SMOTE(random_state=42)
+    X_resampled, y_resampled = smote.fit_resample(X, y)
+    
+    print(f"\nOriginal dataset shape: {X.shape}")
+    print(f"Resampled dataset shape: {X_resampled.shape}")
+    return X_resampled, y_resampled
+
+# Step 3: Model Training
+def train_model(X_train, y_train):
+    print("\nTraining Random Forest model...")
+    model = RandomForestClassifier(random_state=42, n_estimators=100)
+    model.fit(X_train, y_train)
+    print("Model training completed.")
+    return model
+
+# Step 4: Model Evaluation
+def evaluate_model(model, X_test, y_test):
+    y_pred = model.predict(X_test)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    
+    print("\nModel Evaluation:")
+    print(f"Precision: {precision:.2f}")
+    print(f"Recall: {recall:.2f}")
+    print(f"F1-Score: {f1:.2f}")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred))
+
+# Step 5: Testing Interface
+def test_transaction(model, transaction_features):
+    prediction = model.predict([transaction_features])
+    print("\nTesting Interface:")
+    print("Fraudulent transaction detected!" if prediction[0] == 1 else "Transaction is not fraudulent.")
+
+if __name__ == "__main__":
+    # Preprocess the data
+    X, y = preprocess_data(df)
+    
+    # Split into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+ 
+    model = train_model(X_train, y_train)
+
+    evaluate_model(model, X_test, y_test)
+    
+    # Test the model with an example transaction
+    sample_transaction = list(X_test.iloc[0]) 
+    test_transaction(model, sample_transaction)
