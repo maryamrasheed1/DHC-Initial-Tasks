@@ -1,0 +1,37 @@
+import torch
+import pandas as pd
+from transformers import BartForConditionalGeneration, BartTokenizer
+
+def load_data(file_path):
+    df = pd.read_excel(file_path)
+    df.dropna(inplace=True)
+    return df
+
+def preprocess_text(text, tokenizer, max_input_length=1024):
+    inputs = tokenizer(text, max_length=max_input_length, truncation=True, return_tensors="pt")
+    return inputs
+
+def summarize_text(model, tokenizer, text, max_input_length=1024, max_output_length=150):
+    inputs = preprocess_text(text, tokenizer, max_input_length)
+    summary_ids = model.generate(inputs["input_ids"], max_length=max_output_length, num_beams=4, early_stopping=True)
+    summary = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return summary
+
+def main():
+    # Load pre-trained model and tokenizer
+    model_name = "facebook/bart-large-cnn"
+    tokenizer = BartTokenizer.from_pretrained(model_name)
+    model = BartForConditionalGeneration.from_pretrained(model_name)
+    
+    # Provide file path for Excel data
+    file_path = "C:/Users/ALI/Desktop/Excel/text summarization.xlsx"  # Update with the correct file path
+    df = load_data(file_path)
+    
+    # Summarize first few articles
+    for i in range(min(3, len(df))):
+        article = df.iloc[i]['article']
+        summary = summarize_text(model, tokenizer, article)
+        print(f"Original Article {i+1}:\n", article[:500], "...\n")
+        print(f"Generated Summary {i+1}:\n", summary, "\n")
+if __name__ == "__main__":
+    main()
