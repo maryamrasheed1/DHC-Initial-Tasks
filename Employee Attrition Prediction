@@ -1,0 +1,59 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix
+import lime
+from lime.lime_tabular import LimeTabularExplainer
+df = pd.read_excel("C:/Users/ALI/Desktop/Excel/IBM_HR_Analysis.xlsx")
+# Perform Exploratory Data Analysis (EDA)
+print(df.info())  
+print(df.describe())  
+# Visualizing correlation between features (excluding categorical columns)
+# Select numeric columns only
+numeric_cols = df.select_dtypes(include=[np.number]).columns
+correlation_matrix = df[numeric_cols].corr()
+plt.figure(figsize=(12, 8))  # Increase figure size for better readability
+sns.heatmap(correlation_matrix, 
+            annot=True, 
+            cmap='coolwarm', 
+            fmt='.2f', 
+            linewidths=0.5, 
+            annot_kws={"size": 10})  
+plt.title('Correlation Matrix', fontsize=14)
+plt.xticks(rotation=45, ha='right', fontsize=10)  
+plt.yticks(fontsize=10)
+plt.show()
+# Visualizing attrition distribution
+sns.countplot(x='Attrition', data=df)
+plt.title('Attrition Distribution')
+plt.show()
+#  Data Preprocessing
+df = df.dropna() 
+df_encoded = pd.get_dummies(df, drop_first=True)
+X = df_encoded.drop('Attrition_Yes', axis=1)  # Assuming 'Attrition_Yes' is the target variable
+y = df_encoded['Attrition_Yes']
+#Split the data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+#  Scale the features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+# Train a classification model (Random Forest in this case)
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train_scaled, y_train)
+# Evaluate the model
+y_pred = model.predict(X_test_scaled)
+print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
+#Use LIME for explaining the model
+explainer = LimeTabularExplainer(X_train_scaled, training_labels=y_train, mode='classification', feature_names=X.columns)
+# Choose a random instance from the test set for explanation
+idx = np.random.randint(0, len(X_test_scaled))
+exp = explainer.explain_instance(X_test_scaled[idx], model.predict_proba, num_features=10)
+# Display the explanation
+exp.show_in_notebook()
